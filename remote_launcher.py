@@ -311,29 +311,6 @@ def _probe_fastest_mirror():
         print("  ⚠ 镜像探测超时，将逐个尝试")
     return result[0]
 
-def _ensure_deps():
-    """确保 Flask 和 PyYAML 已安装"""
-    missing = []
-    try:
-        __import__("flask")
-    except ImportError:
-        missing.append("flask")
-    try:
-        __import__("yaml")
-    except ImportError:
-        missing.append("pyyaml")
-    if missing:
-        stop = threading.Event()
-        dep_list = ', '.join(missing)
-        spin_t = threading.Thread(target=_spinner, args=(stop, f'安装依赖: {dep_list}…'), daemon=True)
-        spin_t.start()
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install"] + missing + ["-q"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
-        stop.set()
-        spin_t.join(timeout=1)
-
 def _open_browser():
     """等待服务器就绪后打开浏览器"""
     import webbrowser
@@ -352,17 +329,17 @@ def main():
 
     # 检查端口
     if _port_in_use():
-        print(f"\n[1/4] 端口 {_PORT} 已被占用，直接打开浏览器...")
+        print(f"\n[1/3] 端口 {_PORT} 已被占用，直接打开浏览器...")
         import webbrowser
         webbrowser.open(f"http://127.0.0.1:{_PORT}")
         return
 
     # 持久化目录
     editor_dir = _get_editor_dir()
-    print(f"\n[1/4] 编辑器目录: {editor_dir}")
+    print(f"\n[1/3] 编辑器目录: {editor_dir}")
 
     # 检查更新并下载
-    print("[2/4] 检查更新并同步文件…")
+    print("[2/3] 检查更新并同步文件…")
     if not _download(editor_dir):
         # 检查本地是否有完整文件可用
         all_exist = all(
@@ -375,17 +352,12 @@ def main():
             print("  ✗ 缺少必要文件且下载失败，请检查网络")
             return
 
-    # 确保依赖
-    print("[3/4] 检查依赖…")
-    _ensure_deps()
-    print("  ✓ 依赖就绪")
-
     # 后台打开浏览器
     t = threading.Thread(target=_open_browser, daemon=True)
     t.start()
 
     # 启动服务器
-    print(f"[4/4] 启动编辑器服务器 (端口 {_PORT})…")
+    print(f"[3/3] 启动编辑器服务器 (端口 {_PORT})…")
     print("─" * 50)
     print("按 Ctrl+C 停止服务器\n")
     env = os.environ.copy()
