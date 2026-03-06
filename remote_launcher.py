@@ -33,7 +33,9 @@ def _progress_bar(current, total, suffix='', width=30):
     filled = int(width * current / total) if total else 0
     bar = '█' * filled + '░' * (width - filled)
     pct = int(100 * current / total) if total else 0
-    print(f'\r  [{bar}] {current}/{total} {pct}% {suffix}', end='', flush=True)
+    line = f'\r  [{bar}] {current}/{total} {pct}% {suffix}'
+    # 用空格填充到固定宽度，避免短文件名覆盖长文件名时残留字符
+    print(f'{line:<80}', end='', flush=True)
     if current >= total:
         print()
 
@@ -356,19 +358,21 @@ def main():
     t = threading.Thread(target=_open_browser, daemon=True)
     t.start()
 
-    # 启动服务器
+    # 启动服务器（在当前进程内执行 app.py，PyInstaller 环境下 sys.executable 是 EXE 自身）
     print(f"[3/3] 启动编辑器服务器 (端口 {_PORT})…")
     print("─" * 50)
     print("按 Ctrl+C 停止服务器\n")
-    env = os.environ.copy()
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    app_path = os.path.join(editor_dir, "app.py")
+    saved_cwd = os.getcwd()
     try:
-        subprocess.call(
-            [sys.executable, os.path.join(editor_dir, "app.py")],
-            cwd=editor_dir, env=env,
-        )
+        os.chdir(editor_dir)
+        sys.path.insert(0, editor_dir)
+        with open(app_path, "r", encoding="utf-8") as _f:
+            exec(compile(_f.read(), app_path, "exec"), {"__name__": "__main__", "__file__": app_path})
     except KeyboardInterrupt:
         print("\n[*] 正在关闭...")
+    finally:
+        os.chdir(saved_cwd)
 
 if __name__ == "__main__":
     main()
