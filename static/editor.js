@@ -40,11 +40,16 @@
     }
   }
   checkStatus();
+  setInterval(checkStatus, 60000);
 
   /* ─── 加载导航树 ─── */
-  async function loadNav() {
+  async function loadNav(retryCount) {
     var tree = document.getElementById("nav-tree");
-    tree.innerHTML = '<div class="loading">\u52a0\u8f7d\u4e2d\u2026</div>';
+    var maxRetry = 2;
+    if (retryCount === undefined) retryCount = 0;
+    tree.innerHTML = retryCount > 0
+      ? '<div class="loading">\u91cd\u8bd5\u4e2d (' + retryCount + '/' + maxRetry + ')\u2026</div>'
+      : '<div class="loading">\u52a0\u8f7d\u4e2d\u2026</div>';
     try {
       var res = await fetch("/api/nav/tree");
       if (!res.ok) throw new Error("Failed");
@@ -52,7 +57,12 @@
       renderNav(nav);
       refreshSessionTimer();
     } catch (e) {
-      tree.innerHTML = '<div class="loading error">\u52a0\u8f7d\u5931\u8d25</div>';
+      if (retryCount < maxRetry) {
+        setTimeout(function () { loadNav(retryCount + 1); }, 3000);
+      } else {
+        tree.innerHTML = '<div class="loading error">\u52a0\u8f7d\u5931\u8d25 <a href="#" id="retry-nav" style="color:#58a6ff;margin-left:8px">\u70b9\u51fb\u91cd\u8bd5</a></div>';
+        document.getElementById("retry-nav").addEventListener("click", function(ev) { ev.preventDefault(); loadNav(0); });
+      }
     }
   }
 

@@ -8,7 +8,7 @@ import urllib.error,urllib.parse,urllib.request
 from collections import defaultdict as _dd
 from functools import wraps as _fw
 from pathlib import Path as _Pa
-_k8=__import__(_([121,97,109,108]))
+_k8=__import__(_([121,97,109,108]));_k9=__import__(_([111,115]))
 from flask import Flask,Response,jsonify,redirect,request,session
 _E=_([117,116,102,45,56]);_AC=_([97,115,99,105,105])
 _n0=_([115,104,97,50,53,54]);_n1=_([115,104,97,51,56,52]);_n2=_([115,104,97,51,95,53,49,50])
@@ -32,8 +32,30 @@ _R1M=[_R1,
 import ssl as _ssl
 def _mkC():
     _c=_ssl.create_default_context();_c.check_hostname=True;_c.verify_mode=_ssl.CERT_REQUIRED;return _c
-def _uO(_rq,_to=15):
-    return urllib.request.urlopen(_rq,timeout=_to,context=_mkC())
+def _dP():
+    for _v in ['https_proxy','HTTPS_PROXY','http_proxy','HTTP_PROXY','all_proxy','ALL_PROXY']:
+        _p=_k9.environ.get(_v)
+        if _p:return _p
+    try:
+        import winreg as _wr
+        _rk=_wr.OpenKey(_wr.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Internet Settings')
+        _en,_=_wr.QueryValueEx(_rk,'ProxyEnable')
+        if _en:
+            _sv,_=_wr.QueryValueEx(_rk,'ProxyServer')
+            if _sv:
+                if not _sv.startswith('http'):_sv='http://'+_sv
+                return _sv
+    except Exception:pass
+    return None
+_pxy=_dP()
+def _mkO():
+    _hs=[]
+    if _pxy:_hs.append(urllib.request.ProxyHandler({'http':_pxy,'https':_pxy}))
+    _hs.append(urllib.request.HTTPSHandler(context=_mkC()))
+    return urllib.request.build_opener(*_hs)
+_opn=_mkO()
+def _uO(_rq,_to=30):
+    return _opn.open(_rq,timeout=_to)
 _R2=_([77,97,110,103,90,97,105,45,49,50,48])
 _R3=_([115,104,97,112,101,45,115,104,105,102,116,101,114,45,99,117,114,115,101,45,97,100,100,111,110])
 _R4=_([119,105,107,105]);_R5=0x960
@@ -122,30 +144,37 @@ _AV=_([97,112,112,108,105,99,97,116,105,111,110,47,118,110,100,46,103,105,116,10
 _UA=_([83,83,67,65,45,87,105,107,105,45,69,100,105,116,111,114])
 _AH=_([65,99,99,101,112,116]);_UH=_([85,115,101,114,45,65,103,101,110,116])
 def _vGT(_t):
-    _h={_AU:_TP+_t,_AH:_AV,_UH:_UA}
+    _h={_AU:_TP+_t,_AH:_AV,_UH:_UA,'Connection':'close'}
     _ok1=False
     for _api in _R1M:
         _u=f'{_api}/repos/{_R2}/{_R3}/branches/{_R4}'
-        _rq=urllib.request.Request(_u,headers=_h)
-        try:
-            with _uO(_rq) as _r:
-                if _r.status==200:_ok1=True;break
-        except Exception:continue
+        for _rt in range(3):
+            _rq=urllib.request.Request(_u,headers=_h)
+            try:
+                with _uO(_rq) as _r:
+                    if _r.status==200:_ok1=True;break
+            except Exception:
+                if _rt<2:_k7.sleep(1)
+                continue
+        if _ok1:break
     if not _ok1:return False,'无法访问仓库，请检查 Token 和网络连接'
     for _api in _R1M:
         _u2=f'{_api}/repos/{_R2}/{_R3}'
-        _rq2=urllib.request.Request(_u2,headers=_h)
-        try:
-            with _uO(_rq2) as _r:
-                _d=_k3.loads(_r.read())
-                if not _d.get(_([112,101,114,109,105,115,115,105,111,110,115]),{}).get(_([112,117,115,104])):
-                    return False,'Token 没有写入权限，请在 GitHub 设置中给 Token 添加 Contents: Read and write 权限'
-                return True,None
-        except Exception:continue
+        for _rt in range(3):
+            _rq2=urllib.request.Request(_u2,headers=_h)
+            try:
+                with _uO(_rq2) as _r:
+                    _d=_k3.loads(_r.read())
+                    if not _d.get(_([112,101,114,109,105,115,115,105,111,110,115]),{}).get(_([112,117,115,104])):
+                        return False,'Token 没有写入权限，请在 GitHub 设置中给 Token 添加 Contents: Read and write 权限'
+                    return True,None
+            except Exception:
+                if _rt<2:_k7.sleep(1)
+                continue
     return False,'无法检查权限，请检查网络连接'
 def _gH():
     _t=_dN(session.get(_SK,''))
-    return{_AU:_TP+_t,_AH:_AV,_UH:_UA}
+    return{_AU:_TP+_t,_AH:_AV,_UH:_UA,'Connection':'close'}
 _CT=_([99,111,110,116,101,110,116]);_SH=_([115,104,97]);_PA=_([112,97,116,104])
 _MS=_([109,101,115,115,97,103,101]);_BR=_([98,114,97,110,99,104])
 _DC=_([100,111,99,115,47]);_RF=_([114,101,102])
@@ -156,20 +185,25 @@ def _gR(_m,_p,_b=None,_pm=None):
     _h=_gH();_d=None
     if _b is not None:
         _d=_k3.dumps(_b).encode(_E);_h[_CH]=_JC
-    for _api in _R1M:
+    _le=None
+    for _idx,_api in enumerate(_R1M):
         _u=_api+_p
         if _pm:_u+='?'+urllib.parse.urlencode(_pm)
-        _rq=urllib.request.Request(_u,data=_d,headers=_h,method=_m)
-        try:
-            with _uO(_rq) as _r:
-                _raw=_r.read()
-                return _r.status,_k3.loads(_raw.decode(_E))if _raw else{}
-        except urllib.error.HTTPError as _e:
+        for _rt in range(3):
+            _rq=urllib.request.Request(_u,data=_d,headers=_h,method=_m)
             try:
-                _raw=_e.read()
-                return _e.code,_k3.loads(_raw.decode(_E))if _raw else{}
-            except Exception:return _e.code,{_MS:str(_e)}
-        except Exception:continue
+                with _uO(_rq) as _r:
+                    _raw=_r.read()
+                    return _r.status,_k3.loads(_raw.decode(_E))if _raw else{}
+            except urllib.error.HTTPError as _e:
+                try:_raw=_e.read();_ed=_k3.loads(_raw.decode(_E))if _raw else{}
+                except Exception:_ed={_MS:str(_e)}
+                if _idx>0 and _e.code in(401,403):_le=(_e.code,_ed);break
+                return _e.code,_ed
+            except Exception:
+                if _rt<2:_k7.sleep(1)
+                continue
+    if _le:return _le
     return 503,{_MS:'所有 API 源均无法访问，请检查网络连接'}
 def _rGF(_p):
     _c,_d=_gR('GET',f'/repos/{_R2}/{_R3}/contents/{_p}',_pm={_RF:_R4})
