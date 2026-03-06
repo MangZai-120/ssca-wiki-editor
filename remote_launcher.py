@@ -162,7 +162,7 @@ def _build_opener():
 
 _opener = _build_opener()
 
-def _try_download_url(url, timeout=20):
+def _try_download_url(url, timeout=10):
     """尝试下载单个 URL，返回 bytes 或抛出异常"""
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -173,9 +173,14 @@ def _try_download_url(url, timeout=20):
     with _opener.open(req, timeout=timeout) as r:
         return r.read()
 
+# 存储探测后可用的镜像列表（由 _probe_fastest_mirror 填充）
+_alive_mirrors = []
+
 def _download_file(raw_path):
-    """尝试用多个镜像源下载一个文件，返回 bytes 或 None"""
-    for mirror in _MIRRORS:
+    """尝试用可用镜像源下载一个文件，返回 bytes 或 None"""
+    # 优先用探测存活的镜像，否则回退全部镜像
+    mirrors = _alive_mirrors if _alive_mirrors else _MIRRORS
+    for mirror in mirrors:
         url = f"{mirror}/{_OWNER}/{_REPO}/{_BRANCH}/{raw_path}"
         for attempt in range(_MAX_RETRY):
             try:
@@ -184,7 +189,7 @@ def _download_file(raw_path):
                     return data
             except Exception:
                 if attempt < _MAX_RETRY - 1:
-                    time.sleep(0.5)
+                    time.sleep(0.3)
                 continue
     return None
 
@@ -212,11 +217,8 @@ def _download(dest_dir):
                 h.update(chunk)
         return h.hexdigest()
 
-    # 探测最快镜像
-    best_mirror = _probe_fastest_mirror()
-    if best_mirror and best_mirror in _MIRRORS:
-        _MIRRORS.remove(best_mirror)
-        _MIRRORS.insert(0, best_mirror)
+    # 探测最快镜像（结果存入 _alive_mirrors）
+    _probe_fastest_mirror()
 
     new_manifest = {}
     updated = 0
@@ -269,15 +271,20 @@ def _download(dest_dir):
     return ok
 
 def _probe_fastest_mirror():
-    """并发探测所有镜像，返回最快响应的那个"""
+    """并发探测所有镜像，返回最快响应的那个，并记录所有存活的镜像"""
+    global _alive_mirrors
     test_path = f"{_OWNER}/{_REPO}/{_BRANCH}/auth.json"
     result = [None]
+    alive = []
+    alive_lock = threading.Lock()
     stop = threading.Event()
 
     def _probe(mirror):
         try:
             url = f"{mirror}/{test_path}"
             _try_download_url(url, timeout=8)
+            with alive_lock:
+                alive.append(mirror)
             if result[0] is None:
                 result[0] = mirror
                 stop.set()
@@ -303,12 +310,22 @@ def _probe_fastest_mirror():
         if result[0]:
             break
 
+    # 多等 1 秒让其他快镜像也有机会加入 alive
+    time.sleep(1)
+
     stop.set()
     spin_thread.join(timeout=1)
 
+    # 设置存活镜像列表，把最快的放前面
+    if alive:
+        _alive_mirrors = alive[:]
+        if result[0] in _alive_mirrors:
+            _alive_mirrors.remove(result[0])
+            _alive_mirrors.insert(0, result[0])
+
     if result[0]:
         name = result[0].split("//")[1].split("/")[0]
-        print(f"  ✓ 最快镜像: {name}")
+        print(f"  ✓ 最快镜像: {name} (共 {len(alive)} 个可用)")
     else:
         print("  ⚠ 镜像探测超时，将逐个尝试")
     return result[0]
