@@ -244,49 +244,130 @@
       return;
     }
     var title = currentPath || 'preview';
-    previewWin = window.open('', 'ssca_preview', 'width=900,height=700,scrollbars=yes');
+    var pageTitle = title.replace(/\.md$/, '').split('/').pop();
+    previewWin = window.open('', 'ssca_preview', 'width=1100,height=750,scrollbars=yes');
     if (!previewWin) { showToast(t('preview_blocked')); return; }
     var doc = previewWin.document;
     doc.open();
     doc.write('<!DOCTYPE html><html><head>'
       + '<meta charset="utf-8">'
-      + '<title>' + t('preview_title') + ' - ' + title + '</title>'
-      + '<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">'
+      + '<title>' + t('preview_title') + ' - ' + pageTitle + '</title>'
+      + '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">'
       + '<style>'
-      + 'body{font-family:"Segoe UI",-apple-system,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px 40px;line-height:1.7}'
-      + '#header{border-bottom:1px solid #30363d;padding-bottom:12px;margin-bottom:20px;display:flex;align-items:center;gap:12px}'
-      + '#header h3{color:#58a6ff;margin:0;font-size:16px;flex:1}'
-      + '#header .badge{font-size:10px;background:#238636;color:#fff;padding:2px 8px;border-radius:4px;font-weight:600}'
-      + '#preview-body{max-width:860px}'
-      + '#preview-body h1,#preview-body h2,#preview-body h3{color:#58a6ff;border-bottom:1px solid #21262d;padding-bottom:6px;margin:20px 0 10px}'
-      + '#preview-body a{color:#58a6ff}'
-      + '#preview-body code{background:#161b22;padding:2px 6px;border-radius:4px;font-size:90%}'
-      + '#preview-body pre{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;overflow-x:auto}'
-      + '#preview-body table{border-collapse:collapse;width:100%;margin:12px 0}'
-      + '#preview-body th,#preview-body td{border:1px solid #30363d;padding:8px 12px;text-align:left}'
-      + '#preview-body th{background:#161b22;font-weight:600}'
-      + '#preview-body img{max-width:100%;border-radius:6px}'
-      + '#preview-body blockquote{border-left:3px solid #30363d;margin:10px 0;padding:4px 16px;color:#8b949e}'
-      + '#preview-body ul,#preview-body ol{padding-left:24px}'
+      // ─── ReadTheDocs 精确风格 ───
+      + '*{box-sizing:border-box;margin:0;padding:0}'
+      + 'body{font-family:"Lato","proxima-nova","Helvetica Neue",Arial,sans-serif;background:#fcfcfc;color:#404040;line-height:1.6;font-size:16px}'
+      // 顶栏
+      + '#rtd-header{background:#2980b9;color:#fff;padding:12px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}'
+      + '#rtd-header .logo{font-size:18px;font-weight:700}'
+      + '#rtd-header .path{font-size:13px;opacity:.85;flex:1}'
+      + '#rtd-header .badge{font-size:11px;background:rgba(255,255,255,.2);padding:2px 10px;border-radius:10px;font-weight:600}'
+      // 主内容区
+      + '#rtd-content{max-width:800px;margin:0 auto;padding:30px 40px 60px}'
+      // 标题 - ReadTheDocs 风格
+      + '#rtd-content h1{font-size:2em;font-weight:700;color:#404040;border-bottom:1px solid #e1e4e5;padding-bottom:.4em;margin:1.6em 0 .8em}'
+      + '#rtd-content h2{font-size:1.75em;font-weight:700;color:#404040;border-bottom:1px solid #e1e4e5;padding-bottom:.4em;margin:1.4em 0 .6em}'
+      + '#rtd-content h3{font-size:1.25em;font-weight:700;color:#404040;margin:1.2em 0 .5em}'
+      + '#rtd-content h4{font-size:1.1em;font-weight:700;color:#404040;margin:1em 0 .4em}'
+      + '#rtd-content h5,#rtd-content h6{font-size:1em;font-weight:700;color:#404040;margin:.8em 0 .4em}'
+      // 段落与文本
+      + '#rtd-content p{margin:.5em 0;line-height:1.7}'
+      + '#rtd-content a{color:#2980b9;text-decoration:none}'
+      + '#rtd-content a:hover{color:#3091d1;text-decoration:underline}'
+      + '#rtd-content strong{font-weight:700}'
+      // 代码 - 行内
+      + '#rtd-content code{background:#fff;border:1px solid #e1e4e5;border-radius:2px;padding:2px 5px;font-size:85%;color:#e74c3c;font-family:SFMono-Regular,Consolas,"Liberation Mono",Menlo,monospace;white-space:nowrap}'
+      // 代码 - 块
+      + '#rtd-content pre{background:#f8f8f8;border:1px solid #e1e4e5;padding:12px;overflow-x:auto;margin:1em 0;line-height:1.5;border-radius:2px}'
+      + '#rtd-content pre code{border:none;padding:0;background:none;font-size:14px;color:#404040;white-space:pre}'
+      // 表格 - ReadTheDocs 风格
+      + '#rtd-content table{border-collapse:collapse;width:100%;margin:1em 0}'
+      + '#rtd-content th,#rtd-content td{border:1px solid #e1e4e5;padding:8px 12px;text-align:left;font-size:90%}'
+      + '#rtd-content th{background:#f0f0f0;font-weight:700;white-space:nowrap}'
+      + '#rtd-content tr:nth-child(even) td{background:#f9f9f9}'
+      // 引用
+      + '#rtd-content blockquote{border-left:4px solid #ccc;margin:1em 0;padding:.5em 1em;color:#555;background:#f9f9f9}'
+      + '#rtd-content blockquote p{margin:.3em 0}'
+      // 列表
+      + '#rtd-content ul,#rtd-content ol{padding-left:2em;margin:.5em 0}'
+      + '#rtd-content li{margin:.25em 0;line-height:1.7}'
+      + '#rtd-content li>p{margin:.2em 0}'
+      // 图片
+      + '#rtd-content img{max-width:100%;height:auto}'
+      // 水平线
+      + '#rtd-content hr{border:none;border-top:1px solid #e1e4e5;margin:1.5em 0}'
+      // ─── MkDocs Admonition 提示框 ───
+      + '#rtd-content .admonition{padding:0;margin:1em 0;border:none;border-radius:0;overflow:hidden}'
+      + '#rtd-content .admonition-title{font-weight:700;padding:6px 12px;margin:0;font-size:14px}'
+      + '#rtd-content .admonition-body{padding:12px;font-size:14px}'
+      + '#rtd-content .admonition-body p{margin:.4em 0}'
+      + '#rtd-content .admonition-body p:first-child{margin-top:0}'
+      + '#rtd-content .admonition-body p:last-child{margin-bottom:0}'
+      // note / seealso / info（蓝色系）
+      + '#rtd-content .admonition.note,#rtd-content .admonition.seealso,#rtd-content .admonition.info{background:#e7f2fa}'
+      + '#rtd-content .admonition.note .admonition-title,#rtd-content .admonition.seealso .admonition-title,#rtd-content .admonition.info .admonition-title{background:#6ab0de;color:#fff}'
+      // warning / caution / attention（橙色系）
+      + '#rtd-content .admonition.warning,#rtd-content .admonition.caution,#rtd-content .admonition.attention{background:#ffedcc}'
+      + '#rtd-content .admonition.warning .admonition-title,#rtd-content .admonition.caution .admonition-title,#rtd-content .admonition.attention .admonition-title{background:#f0b37e;color:#fff}'
+      // danger / error / critical（红色系）
+      + '#rtd-content .admonition.danger,#rtd-content .admonition.error{background:#fdf3f2}'
+      + '#rtd-content .admonition.danger .admonition-title,#rtd-content .admonition.error .admonition-title{background:#f29f97;color:#fff}'
+      // tip / hint / important（绿色系）
+      + '#rtd-content .admonition.tip,#rtd-content .admonition.hint,#rtd-content .admonition.important{background:#dbfaf4}'
+      + '#rtd-content .admonition.tip .admonition-title,#rtd-content .admonition.hint .admonition-title,#rtd-content .admonition.important .admonition-title{background:#1abc9c;color:#fff}'
       + '</style>'
       + '</head><body>'
-      + '<div id="header"><h3 id="preview-path">' + title + '</h3><span class="badge">' + t('preview_live') + '</span></div>'
-      + '<div id="preview-body"></div>'
-      + '<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"><\/script>'
+      + '<div id="rtd-header">'
+      + '  <span class="logo">SSCA Wiki</span>'
+      + '  <span class="path">' + title + '</span>'
+      + '  <span class="badge">' + t('preview_live') + '</span>'
+      + '</div>'
+      + '<div id="rtd-content"></div>'
+      + '<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>'
+      + '<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>'
       + '<script>'
+      // ─── MkDocs admonition 预处理器 ───
+      + 'function preprocessAdmonitions(md){'
+      + '  var lines=md.split("\\n"),out=[],i=0;'
+      + '  while(i<lines.length){'
+      + '    var m=lines[i].match(/^!!!\\s+(\\w+)(?:\\s+"([^"]*)")?\\s*$/);'
+      + '    if(m){'
+      + '      var aType=m[1],aTitle=m[2]||m[1],body=[];'
+      + '      i++;'
+      + '      while(i<lines.length&&(lines[i].match(/^    /)||lines[i].match(/^\\t/)||lines[i].match(/^\\s*$/))){'
+      + '        var bl=lines[i].replace(/^    /,"").replace(/^\\t/,"");'
+      + '        if(lines[i].match(/^\\s*$/)&&i+1<lines.length&&!lines[i+1].match(/^    |^\\t/))break;'
+      + '        body.push(bl);i++;'
+      + '      }'
+      + '      var bodyMd=body.join("\\n").trim();'
+      + '      out.push("<div class=\\"admonition "+aType+"\\"><p class=\\"admonition-title\\">"+aTitle+"</p><div class=\\"admonition-body\\">\\n\\n"+bodyMd+"\\n\\n</div></div>\\n");'
+      + '    }else{out.push(lines[i]);i++;}'
+      + '  }'
+      + '  return out.join("\\n");'
+      + '}'
+      // ─── marked 配置 ───
+      + 'marked.setOptions({breaks:true,gfm:true,highlight:function(code,lang){'
+      + '  if(lang&&hljs.getLanguage(lang))try{return hljs.highlight(code,{language:lang}).value}catch(e){}'
+      + '  return hljs.highlightAuto(code).value'
+      + '}});'
+      // ─── 接收消息渲染 ───
       + 'window.addEventListener("message", function(e){'
       + '  if(!e.data||e.data.type!=="ssca-preview")return;'
-      + '  var el=document.createElement("div");'
-      + '  var viewer=toastui.Editor.factory({el:el,viewer:true,initialValue:e.data.markdown});'
-      + '  document.getElementById("preview-body").innerHTML=el.querySelector(".toastui-editor-contents").innerHTML;'
+      + '  var md=preprocessAdmonitions(e.data.markdown);'
+      + '  var html=marked.parse(md);'
+      // 后处理：让admonition-body内的markdown也被渲染
+      + '  var el=document.createElement("div");el.innerHTML=html;'
+      + '  el.querySelectorAll(".admonition-body").forEach(function(b){'
+      + '    b.innerHTML=marked.parse(b.textContent||b.innerText);'
+      + '  });'
+      + '  document.getElementById("rtd-content").innerHTML=el.innerHTML;'
       + '});'
       + '<\/script></body></html>');
     doc.close();
-    // 延迟一下等新窗口加载完
     setTimeout(function () {
       updatePreview();
       startPreviewSync();
-    }, 1000);
+    }, 1500);
     showToast(t('preview_opened'));
   });
 
