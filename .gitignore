@@ -4,3 +4,5 @@ __pycache__/
 .vscode/
 远程启动器.bat
 启动编辑器.bat
+*.spec
+build/
