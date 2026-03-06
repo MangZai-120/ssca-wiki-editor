@@ -7,6 +7,26 @@ SSCA Wiki Editor — 远程启动器
 import hashlib,os,socket,ssl,subprocess,sys,threading,time
 import urllib.error,urllib.request,json
 
+# ─── 控制台编码修复 ───
+def _setup_console():
+    """将 Windows 控制台切换到 UTF-8，防止 Unicode 字符输出崩溃"""
+    try:
+        if sys.platform == 'win32':
+            import ctypes as _ct
+            _ct.windll.kernel32.SetConsoleOutputCP(65001)
+            _ct.windll.kernel32.SetConsoleCP(65001)
+    except Exception:
+        pass
+    # 强制 stdout/stderr 使用 utf-8，遇到无法编码的字符用 ? 替代
+    if hasattr(sys.stdout, 'reconfigure'):
+        try:
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+
+_setup_console()
+
 # ─── 控制台进度工具 ───
 def _progress_bar(current, total, suffix='', width=30):
     """在同一行刷新显示进度条"""
@@ -304,7 +324,8 @@ def _ensure_deps():
         missing.append("pyyaml")
     if missing:
         stop = threading.Event()
-        spin_t = threading.Thread(target=_spinner, args=(stop, f'安装依赖: {', '.join(missing)}…'), daemon=True)
+        dep_list = ', '.join(missing)
+        spin_t = threading.Thread(target=_spinner, args=(stop, f'安装依赖: {dep_list}…'), daemon=True)
         spin_t.start()
         subprocess.check_call(
             [sys.executable, "-m", "pip", "install"] + missing + ["-q"],
