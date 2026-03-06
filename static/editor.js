@@ -201,6 +201,7 @@
 
       // 启用按钮
       document.getElementById("btn-save").disabled = false;
+      document.getElementById("btn-preview").disabled = false;
       document.getElementById("btn-delete").disabled = (path === "index.md");
 
       refreshSessionTimer();
@@ -209,6 +210,85 @@
       showToast(t('load_page_error', e.message));
     }
   }
+
+  /* ─── 实时预览窗口 ─── */
+  var previewWin = null;
+  var previewTimer = null;
+
+  function updatePreview() {
+    if (!previewWin || previewWin.closed || !editor) {
+      stopPreviewSync();
+      return;
+    }
+    try {
+      var md = editor.getMarkdown();
+      previewWin.postMessage({ type: 'ssca-preview', markdown: md }, '*');
+    } catch (e) {}
+  }
+
+  function startPreviewSync() {
+    if (previewTimer) return;
+    previewTimer = setInterval(updatePreview, 500);
+  }
+
+  function stopPreviewSync() {
+    if (previewTimer) { clearInterval(previewTimer); previewTimer = null; }
+    previewWin = null;
+  }
+
+  document.getElementById("btn-preview").addEventListener("click", function () {
+    if (!editor) return;
+    if (previewWin && !previewWin.closed) {
+      previewWin.focus();
+      updatePreview();
+      return;
+    }
+    var title = currentPath || 'preview';
+    previewWin = window.open('', 'ssca_preview', 'width=900,height=700,scrollbars=yes');
+    if (!previewWin) { showToast(t('preview_blocked')); return; }
+    var doc = previewWin.document;
+    doc.open();
+    doc.write('<!DOCTYPE html><html><head>'
+      + '<meta charset="utf-8">'
+      + '<title>' + t('preview_title') + ' - ' + title + '</title>'
+      + '<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">'
+      + '<style>'
+      + 'body{font-family:"Segoe UI",-apple-system,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px 40px;line-height:1.7}'
+      + '#header{border-bottom:1px solid #30363d;padding-bottom:12px;margin-bottom:20px;display:flex;align-items:center;gap:12px}'
+      + '#header h3{color:#58a6ff;margin:0;font-size:16px;flex:1}'
+      + '#header .badge{font-size:10px;background:#238636;color:#fff;padding:2px 8px;border-radius:4px;font-weight:600}'
+      + '#preview-body{max-width:860px}'
+      + '#preview-body h1,#preview-body h2,#preview-body h3{color:#58a6ff;border-bottom:1px solid #21262d;padding-bottom:6px;margin:20px 0 10px}'
+      + '#preview-body a{color:#58a6ff}'
+      + '#preview-body code{background:#161b22;padding:2px 6px;border-radius:4px;font-size:90%}'
+      + '#preview-body pre{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;overflow-x:auto}'
+      + '#preview-body table{border-collapse:collapse;width:100%;margin:12px 0}'
+      + '#preview-body th,#preview-body td{border:1px solid #30363d;padding:8px 12px;text-align:left}'
+      + '#preview-body th{background:#161b22;font-weight:600}'
+      + '#preview-body img{max-width:100%;border-radius:6px}'
+      + '#preview-body blockquote{border-left:3px solid #30363d;margin:10px 0;padding:4px 16px;color:#8b949e}'
+      + '#preview-body ul,#preview-body ol{padding-left:24px}'
+      + '</style>'
+      + '</head><body>'
+      + '<div id="header"><h3 id="preview-path">' + title + '</h3><span class="badge">' + t('preview_live') + '</span></div>'
+      + '<div id="preview-body"></div>'
+      + '<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"><\/script>'
+      + '<script>'
+      + 'window.addEventListener("message", function(e){'
+      + '  if(!e.data||e.data.type!=="ssca-preview")return;'
+      + '  var el=document.createElement("div");'
+      + '  var viewer=toastui.Editor.factory({el:el,viewer:true,initialValue:e.data.markdown});'
+      + '  document.getElementById("preview-body").innerHTML=el.querySelector(".toastui-editor-contents").innerHTML;'
+      + '});'
+      + '<\/script></body></html>');
+    doc.close();
+    // 延迟一下等新窗口加载完
+    setTimeout(function () {
+      updatePreview();
+      startPreviewSync();
+    }, 1000);
+    showToast(t('preview_opened'));
+  });
 
   /* ─── 撤回按钮 ─── */
   function pushUndo() {
@@ -421,6 +501,7 @@
         document.getElementById("editor-container").style.display = "none";
         document.getElementById("current-path").textContent = t('no_file');
         document.getElementById("btn-save").disabled = true;
+        document.getElementById("btn-preview").disabled = true;
         document.getElementById("btn-delete").disabled = true;
         await loadNav();
       } else {
