@@ -75,15 +75,15 @@ _FILES = [
 
 # 多个下载源：优先镜像（国内快），最后回退到原始 GitHub
 _MIRRORS = [
-    "https://ghfast.top/https://raw.githubusercontent.com",
     "https://gh-proxy.com/https://raw.githubusercontent.com",
-    "https://mirror.ghproxy.com/https://raw.githubusercontent.com",
     "https://ghproxy.net/https://raw.githubusercontent.com",
+    "https://raw.githubusercontent.com",
+    "https://ghfast.top/https://raw.githubusercontent.com",
+    "https://cors.isteed.cc/https://raw.githubusercontent.com",
+    "https://mirror.ghproxy.com/https://raw.githubusercontent.com",
     "https://github.moeyy.xyz/https://raw.githubusercontent.com",
     "https://gh.api.99988866.xyz/https://raw.githubusercontent.com",
-    "https://cors.isteed.cc/https://raw.githubusercontent.com",
     "https://raw.gitmirror.com",
-    "https://raw.githubusercontent.com",
 ]
 
 _API = "https://api.github.com"
@@ -368,7 +368,11 @@ def main():
         os.chdir(editor_dir)
         sys.path.insert(0, editor_dir)
         with open(app_path, "r", encoding="utf-8") as _f:
-            exec(compile(_f.read(), app_path, "exec"), {"__name__": "__main__", "__file__": app_path})
+            code = compile(_f.read(), app_path, "exec")
+        # 传入完整的 builtins，确保 app.py 内 import flask/yaml 等能找到 PyInstaller 打包的模块
+        import builtins
+        g = {"__name__": "__main__", "__file__": app_path, "__builtins__": builtins}
+        exec(code, g)
     except KeyboardInterrupt:
         print("\n[*] 正在关闭...")
     finally:
