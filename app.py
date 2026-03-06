@@ -24,6 +24,16 @@ app=Flask(__name__,static_folder=_([115,116,97,116,105,99]),static_url_path=_([4
 app.config[_([83,69,83,83,73,79,78,95,67,79,79,75,73,69,95,72,84,84,80,79,78,76,89])]=True
 app.config[_([83,69,83,83,73,79,78,95,67,79,79,75,73,69,95,83,65,77,69,83,73,84,69])]=_([76,97,120])
 _R1=_([104,116,116,112,115,58,47,47,97,112,105,46,103,105,116,104,117,98,46,99,111,109])
+_R1M=[_R1,
+'https://ghfast.top/https://api.github.com',
+'https://gh-proxy.com/https://api.github.com',
+'https://mirror.ghproxy.com/https://api.github.com',
+]
+import ssl as _ssl
+def _mkC():
+    _c=_ssl.create_default_context();_c.check_hostname=True;_c.verify_mode=_ssl.CERT_REQUIRED;return _c
+def _uO(_rq,_to=15):
+    return urllib.request.urlopen(_rq,timeout=_to,context=_mkC())
 _R2=_([77,97,110,103,90,97,105,45,49,50,48])
 _R3=_([115,104,97,112,101,45,115,104,105,102,116,101,114,45,99,117,114,115,101,45,97,100,100,111,110])
 _R4=_([119,105,107,105]);_R5=0x960
@@ -113,21 +123,26 @@ _UA=_([83,83,67,65,45,87,105,107,105,45,69,100,105,116,111,114])
 _AH=_([65,99,99,101,112,116]);_UH=_([85,115,101,114,45,65,103,101,110,116])
 def _vGT(_t):
     _h={_AU:_TP+_t,_AH:_AV,_UH:_UA}
-    _u=f'{_R1}/repos/{_R2}/{_R3}/branches/{_R4}'
-    _rq=urllib.request.Request(_u,headers=_h)
-    try:
-        with urllib.request.urlopen(_rq)as _r:
-            if _r.status!=200:return False,'无法访问仓库'
-    except Exception:return False,'无法访问仓库，请检查 Token 是否正确'
-    _u2=f'{_R1}/repos/{_R2}/{_R3}'
-    _rq2=urllib.request.Request(_u2,headers=_h)
-    try:
-        with urllib.request.urlopen(_rq2)as _r:
-            _d=_k3.loads(_r.read())
-            if not _d.get(_([112,101,114,109,105,115,115,105,111,110,115]),{}).get(_([112,117,115,104])):
-                return False,'Token 没有写入权限，请在 GitHub 设置中给 Token 添加 Contents: Read and write 权限'
-    except Exception:return False,'无法检查权限'
-    return True,None
+    _ok1=False
+    for _api in _R1M:
+        _u=f'{_api}/repos/{_R2}/{_R3}/branches/{_R4}'
+        _rq=urllib.request.Request(_u,headers=_h)
+        try:
+            with _uO(_rq) as _r:
+                if _r.status==200:_ok1=True;break
+        except Exception:continue
+    if not _ok1:return False,'无法访问仓库，请检查 Token 和网络连接'
+    for _api in _R1M:
+        _u2=f'{_api}/repos/{_R2}/{_R3}'
+        _rq2=urllib.request.Request(_u2,headers=_h)
+        try:
+            with _uO(_rq2) as _r:
+                _d=_k3.loads(_r.read())
+                if not _d.get(_([112,101,114,109,105,115,115,105,111,110,115]),{}).get(_([112,117,115,104])):
+                    return False,'Token 没有写入权限，请在 GitHub 设置中给 Token 添加 Contents: Read and write 权限'
+                return True,None
+        except Exception:continue
+    return False,'无法检查权限，请检查网络连接'
 def _gH():
     _t=_dN(session.get(_SK,''))
     return{_AU:_TP+_t,_AH:_AV,_UH:_UA}
@@ -138,21 +153,24 @@ _NV=_([110,97,118]);_MD=_([109,107,100,111,99,115,46,121,109,108])
 _CH=_([67,111,110,116,101,110,116,45,84,121,112,101])
 _JC=_([97,112,112,108,105,99,97,116,105,111,110,47,106,115,111,110])
 def _gR(_m,_p,_b=None,_pm=None):
-    _u=_R1+_p
-    if _pm:_u+='?'+urllib.parse.urlencode(_pm)
     _h=_gH();_d=None
     if _b is not None:
         _d=_k3.dumps(_b).encode(_E);_h[_CH]=_JC
-    _rq=urllib.request.Request(_u,data=_d,headers=_h,method=_m)
-    try:
-        with urllib.request.urlopen(_rq)as _r:
-            _raw=_r.read()
-            return _r.status,_k3.loads(_raw.decode(_E))if _raw else{}
-    except urllib.error.HTTPError as _e:
+    for _api in _R1M:
+        _u=_api+_p
+        if _pm:_u+='?'+urllib.parse.urlencode(_pm)
+        _rq=urllib.request.Request(_u,data=_d,headers=_h,method=_m)
         try:
-            _raw=_e.read()
-            return _e.code,_k3.loads(_raw.decode(_E))if _raw else{}
-        except Exception:return _e.code,{_MS:str(_e)}
+            with _uO(_rq) as _r:
+                _raw=_r.read()
+                return _r.status,_k3.loads(_raw.decode(_E))if _raw else{}
+        except urllib.error.HTTPError as _e:
+            try:
+                _raw=_e.read()
+                return _e.code,_k3.loads(_raw.decode(_E))if _raw else{}
+            except Exception:return _e.code,{_MS:str(_e)}
+        except Exception:continue
+    return 503,{_MS:'所有 API 源均无法访问，请检查网络连接'}
 def _rGF(_p):
     _c,_d=_gR('GET',f'/repos/{_R2}/{_R3}/contents/{_p}',_pm={_RF:_R4})
     if _c!=200:return None
