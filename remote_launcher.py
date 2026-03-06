@@ -26,6 +26,9 @@ _FILES = [
     "editor.html",
     "static/editor.css",
     "static/editor.js",
+    "static/i18n.js",
+    "static/lang/zh_CN.json",
+    "static/lang/en_US.json",
 ]
 
 # 多个下载源：优先镜像（国内快），最后回退到原始 GitHub

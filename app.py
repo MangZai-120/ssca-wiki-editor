@@ -23,6 +23,24 @@ _0xFACE=lambda _a,_b:bytes(_x^_y for _x,_y in zip(_a,_b*((len(_a)//len(_b))+1)))
 app=Flask(__name__,static_folder=_([115,116,97,116,105,99]),static_url_path=_([47,115,116,97,116,105,99]),root_path=str(_Pa(__file__).parent))
 app.config[_([83,69,83,83,73,79,78,95,67,79,79,75,73,69,95,72,84,84,80,79,78,76,89])]=True
 app.config[_([83,69,83,83,73,79,78,95,67,79,79,75,73,69,95,83,65,77,69,83,73,84,69])]=_([76,97,120])
+_i18n_cache={}
+def _loadLang(_lg):
+    if _lg in _i18n_cache:return _i18n_cache[_lg]
+    _fp=_Pa(__file__).parent/'static'/'lang'/f'{_lg}.json'
+    if _fp.exists():
+        try:
+            _i18n_cache[_lg]=_k3.loads(_fp.read_text(_E));return _i18n_cache[_lg]
+        except Exception:pass
+    return{}
+def _gL():
+    _lg=request.cookies.get('lang','zh_CN')
+    if _lg not in('zh_CN','en_US'):_lg='zh_CN'
+    return _lg
+def _t(_key,*_args):
+    _d=_loadLang(_gL())
+    _s=_d.get(_key,_key)
+    for _i,_a in enumerate(_args):_s=_s.replace('{'+str(_i)+'}',str(_a))
+    return _s
 _R1=_([104,116,116,112,115,58,47,47,97,112,105,46,103,105,116,104,117,98,46,99,111,109])
 _R1M=[_R1,
 'https://ghfast.top/https://api.github.com',
@@ -151,15 +169,15 @@ def _aG(_f):
     @_fw(_f)
     def _d(*_a,**_kw):
         if not session.get(_SA):
-            if request.path.startswith(_AP):return jsonify({_ER:'未登录'}),401
+            if request.path.startswith(_AP):return jsonify({_ER:_t('err_not_logged_in')}),401
             return redirect(_LP)
         _ts=session.get(_ST,0)
         if _k7.time()-_ts>_R5:
             session.clear()
-            if request.path.startswith(_AP):return jsonify({_ER:'会话已过期'}),401
+            if request.path.startswith(_AP):return jsonify({_ER:_t('err_session_expired')}),401
             return redirect(_LP)
         if request.method==_([80,79,83,84])and request.path.startswith(_AP):
-            if request.headers.get(_XRW)!=_XHR:return jsonify({_ER:'请求被拒绝'}),403
+            if request.headers.get(_XRW)!=_XHR:return jsonify({_ER:_t('err_request_denied')}),403
         session[_ST]=_k7.time()
         return _f(*_a,**_kw)
     return _d
@@ -167,8 +185,8 @@ _AU=_([65,117,116,104,111,114,105,122,97,116,105,111,110]);_TP=_([116,111,107,10
 _AV=_([97,112,112,108,105,99,97,116,105,111,110,47,118,110,100,46,103,105,116,104,117,98,46,118,51,43,106,115,111,110])
 _UA=_([83,83,67,65,45,87,105,107,105,45,69,100,105,116,111,114])
 _AH=_([65,99,99,101,112,116]);_UH=_([85,115,101,114,45,65,103,101,110,116])
-def _vGT(_t):
-    _h={_AU:_TP+_t,_AH:_AV,_UH:_UA,'Connection':'close'}
+def _vGT(_tk0):
+    _h={_AU:_TP+_tk0,_AH:_AV,_UH:_UA,'Connection':'close'}
     _ok1=False
     for _api in _R1M:
         _u=f'{_api}/repos/{_R2}/{_R3}/branches/{_R4}'
@@ -181,7 +199,7 @@ def _vGT(_t):
                 if _rt<2:_k7.sleep(1)
                 continue
         if _ok1:break
-    if not _ok1:return False,'无法访问仓库，请检查 Token 和网络连接'
+    if not _ok1:return False,_t('err_cannot_access_repo')
     for _api in _R1M:
         _u2=f'{_api}/repos/{_R2}/{_R3}'
         for _rt in range(3):
@@ -190,15 +208,15 @@ def _vGT(_t):
                 with _uO(_rq2) as _r:
                     _d=_k3.loads(_r.read())
                     if not _d.get(_([112,101,114,109,105,115,115,105,111,110,115]),{}).get(_([112,117,115,104])):
-                        return False,'Token 没有写入权限，请在 GitHub 设置中给 Token 添加 Contents: Read and write 权限'
+                        return False,_t('err_no_write_perm')
                     return True,None
             except Exception:
                 if _rt<2:_k7.sleep(1)
                 continue
-    return False,'无法检查权限，请检查网络连接'
+    return False,_t('err_check_perm_fail')
 def _gH():
-    _t=_dN(session.get(_SK,''))
-    return{_AU:_TP+_t,_AH:_AV,_UH:_UA,'Connection':'close'}
+    _tk0=_dN(session.get(_SK,''))
+    return{_AU:_TP+_tk0,_AH:_AV,_UH:_UA,'Connection':'close'}
 _CT=_([99,111,110,116,101,110,116]);_SH=_([115,104,97]);_PA=_([112,97,116,104])
 _MS=_([109,101,115,115,97,103,101]);_BR=_([98,114,97,110,99,104])
 _DC=_([100,111,99,115,47]);_RF=_([114,101,102])
@@ -228,7 +246,7 @@ def _gR(_m,_p,_b=None,_pm=None):
                 if _rt<2:_k7.sleep(1)
                 continue
     if _le:return _le
-    return 503,{_MS:'所有 API 源均无法访问，请检查网络连接'}
+    return 503,{_MS:_t('err_all_api_down')}
 def _rGF(_p):
     _c,_d=_gR('GET',f'/repos/{_R2}/{_R3}/contents/{_p}',_pm={_RF:_R4})
     if _c!=200:return None
@@ -240,17 +258,17 @@ def _wGF(_p,_cn,_sh=None,_mg='Update'):
     _c,_d=_gR('PUT',f'/repos/{_R2}/{_R3}/contents/{_p}',_b=_bd)
     if _c in(200,201):return{_SH:_d.get(_CT,{}).get(_SH)}
     _m=_d.get(_MS,'')if isinstance(_d,dict)else''
-    if _c==403:return{_ER:'Token 权限不足，请在 GitHub 设置中给 Token 添加 Contents: Read and write 权限'}
-    if _c==409:return{_ER:'文件已被修改，请刷新后重试'}
-    if _c==422:return{_ER:f'GitHub 报错: {_m}'}
-    return{_ER:f'GitHub API 错误 ({_c}): {_m}'}
+    if _c==403:return{_ER:_t('err_token_no_perm')}
+    if _c==409:return{_ER:_t('err_file_modified')}
+    if _c==422:return{_ER:_t('err_github_report',_m)}
+    return{_ER:_t('err_github_error',_c,_m)}
 def _xGF(_p,_sh,_mg='Delete'):
     _bd={_MS:_mg,_SH:_sh,_BR:_R4}
     _c,_d=_gR('DELETE',f'/repos/{_R2}/{_R3}/contents/{_p}',_b=_bd)
     if _c==200:return{_OK:True}
     _m=_d.get(_MS,'')if isinstance(_d,dict)else''
-    if _c==403:return{_ER:'Token 权限不足，请在 GitHub 设置中给 Token 添加 Contents: Read and write 权限'}
-    return{_ER:f'GitHub API 错误 ({_c}): {_m}'}
+    if _c==403:return{_ER:_t('err_token_no_perm')}
+    return{_ER:_t('err_github_error',_c,_m)}
 def _nBx(_ls):
     _st=None
     for _i,_l in enumerate(_ls):
@@ -277,12 +295,12 @@ def _wN(_nd):
     return _SH in _r
 @app.route(_([47,97,112,105,47,118,101,114,105,102,121,95,116,111,107,101,110]),methods=[_([80,79,83,84])])
 def _rt0():
-    if request.headers.get(_XRW)!=_XHR:return jsonify({_OK:False,_ER:'请求被拒绝'}),403
+    if request.headers.get(_XRW)!=_XHR:return jsonify({_OK:False,_ER:_t('err_request_denied')}),403
     _ip=request.remote_addr;_al,_ry=_qL(_ip)
-    if not _al:return jsonify({_OK:False,_ER:f'尝试过于频繁，请 {_ry} 秒后重试'})
-    _d=request.json;_t=(_d.get(_([116,111,107,101,110]))or'').strip()
-    if not _t:return jsonify({_OK:False,_ER:'请输入 Token'})
-    _o,_e=_vGT(_t)
+    if not _al:return jsonify({_OK:False,_ER:_t('err_too_frequent',_ry)})
+    _d=request.json;_t2=(_d.get(_([116,111,107,101,110]))or'').strip()
+    if not _t2:return jsonify({_OK:False,_ER:_t('err_enter_token')})
+    _o,_e=_vGT(_t2)
     if _o:return jsonify({_OK:True})
     _qF(_ip);return jsonify({_OK:False,_ER:_e})
 @app.route(_LP,methods=['GET',_([80,79,83,84])])
@@ -291,21 +309,21 @@ def _rt1():
     if request.method==_([80,79,83,84]):
         _ip=request.remote_addr;_al,_ry=_qL(_ip)
         if not _al:
-            _er=f'<p class="error">尝试过于频繁，请 {_ry} 秒后重试</p>'
+            _er=f'<p class="error">{_t("err_too_frequent",_ry)}</p>'
         else:
             _cs=request.form.get(_([99,115,114,102,95,116,111,107,101,110]),'')
             if not _cN(_cs):
-                _er='<p class="error">安全验证失败，请重试</p>'
+                _er=f'<p class="error">{_t("err_csrf_fail")}</p>'
             else:
                 _tk=request.form.get(_([116,111,107,101,110]),'').strip()
                 _pw=request.form.get(_([112,97,115,115,119,111,114,100]),'')
                 _cd=request.form.get(_([118,101,114,105,102,121,95,99,111,100,101]),'')
                 if not _tk or not _pw or not _cd:
-                    _er='<p class="error">请填写所有字段</p>';_qF(_ip)
+                    _er=f'<p class="error">{_t("err_fill_all")}</p>';_qF(_ip)
                 elif not _vP(_pw):
-                    _er='<p class="error">密码错误</p>';_qF(_ip)
+                    _er=f'<p class="error">{_t("err_wrong_pw")}</p>';_qF(_ip)
                 elif not _vC(_cd):
-                    _er='<p class="error">验证码错误</p>';_qF(_ip)
+                    _er=f'<p class="error">{_t("err_wrong_code")}</p>';_qF(_ip)
                 else:
                     session[_SA]=True;session[_ST]=_k7.time()
                     session[_SK]=_eN(_tk);return redirect('/')
@@ -340,7 +358,7 @@ def _rt6():
     _cn=_d[_CT];_sh=_d.get(_SH)
     _r=_wGF(_DC+_p,_cn,_sh,'更新 '+_p)
     if _SH in _r:return jsonify({_OK:True,_SH:_r[_SH]})
-    return jsonify({_ER:_r.get(_ER,'保存失败')}),409
+    return jsonify({_ER:_r.get(_ER,_t('save_default_fail'))}),409
 @app.route(_([47,97,112,105,47,112,97,103,101,47,99,114,101,97,116,101]),methods=[_([80,79,83,84])])
 @_aG
 def _rt7():
@@ -350,11 +368,11 @@ def _rt7():
     if not _p:return jsonify({_ER:'Invalid path'}),400
     _MX=_([46,109,100])
     if not _p.endswith(_MX):_p+=_MX
-    _TL=_([116,105,116,108,101]);_tl=_d.get(_TL,'新页面')
+    _TL=_([116,105,116,108,101]);_tl=_d.get(_TL,'')
     _sn=_d.get(_([115,101,99,116,105,111,110]));_gp=_DC+_p
     _ex=_rGF(_gp)
-    if _ex:return jsonify({_ER:'文件已存在'}),409
-    _cn=f'# {_tl}\n\n在此开始编写内容……\n'
+    if _ex:return jsonify({_ER:_t('err_file_exists')}),409
+    _cn=f'# {_tl}\n\n\n'
     _r=_wGF(_gp,_cn,None,'创建 '+_p)
     if _ER in _r:return jsonify({_ER:_r[_ER]}),500
     _ns=_r[_SH]
@@ -377,7 +395,7 @@ def _rt8():
     if not _fd:return jsonify({_ER:'Not found'}),404
     _r=_xGF(_gp,_fd[_SH],'删除 '+_p)
     if _OK in _r:return jsonify({_OK:True})
-    return jsonify({_ER:_r.get(_ER,'删除失败')}),500
+    return jsonify({_ER:_r.get(_ER,_t('delete_failed'))}),500
 @app.route(_([47,97,112,105,47,112,97,103,101,115]))
 @_aG
 def _rt9():
@@ -428,7 +446,7 @@ def _rtD():
     _d=request.json
     if not _d:return jsonify({_ER:'Invalid request'}),400
     _on=_d.get(_([111,108,100,95,110,97,109,101]),'');_nn=_d.get(_([110,101,119,95,110,97,109,101]),'')
-    if not _on or not _nn:return jsonify({_ER:'参数缺失'}),400
+    if not _on or not _nn:return jsonify({_ER:_t('err_param_missing')}),400
     _se=_d.get(_([115,101,99,116,105,111,110]));_nv,_x=_rN();_fo=False
     if _se:
         for _it in _nv:
@@ -441,10 +459,10 @@ def _rtD():
         for _i,_it in enumerate(_nv):
             if isinstance(_it,dict)and _on in _it:
                 _nv[_i]={_nn:_it[_on]};_fo=True;break
-    if not _fo:return jsonify({_ER:'未找到该名称'}),404
+    if not _fo:return jsonify({_ER:_t('err_name_not_found')}),404
     _o=_wN(_nv)
     if _o:return jsonify({_OK:True})
-    return jsonify({_ER:'保存到 GitHub 失败'}),500
+    return jsonify({_ER:_t('err_save_github_fail')}),500
 @app.route(_([47,97,112,105,47,115,116,97,116,117,115]))
 @_aG
 def _rtE():

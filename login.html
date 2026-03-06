@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SSCA Wiki Editor (GitHub) - 登录</title>
+<title>SSCA Wiki Editor (GitHub) - Login</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9;
@@ -46,8 +46,14 @@ button:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
 </head>
 <body>
 <div class="card">
-  <h1>SSCA Wiki Editor <span class="badge">GitHub</span></h1>
-  <p class="sub">请完成以下步骤以进入编辑器</p>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <h1>SSCA Wiki Editor <span class="badge">GitHub</span></h1>
+    <select id="lang-select" style="font-size:12px;background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 4px;cursor:pointer;" onchange="i18n.setLang(this.value)">
+      <option value="zh_CN">中文</option>
+      <option value="en_US">English</option>
+    </select>
+  </div>
+  <p class="sub" data-i18n="login_subtitle">请完成以下步骤以进入编辑器</p>
   <div class="progress-bar">
     <div class="progress-dot current" id="dot1"></div>
     <div class="progress-dot" id="dot2"></div>
@@ -56,38 +62,40 @@ button:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
 
   <!-- Step 1: GitHub Token -->
   <div class="step active" id="step1">
-    <div class="step-label">STEP 1</div>
-    <label for="token">请输入令牌</label>
-    <input type="password" id="token" placeholder="github_pat_..." autofocus>
+    <div class="step-label" data-i18n="step1_label">STEP 1</div>
+    <label for="token" data-i18n="token_label">请输入令牌</label>
+    <input type="password" id="token" data-i18n-placeholder="token_placeholder" placeholder="github_pat_..." autofocus>
     <div id="tokenError"></div>
     <div id="tokenOk"></div>
-    <button type="button" id="tokenBtn" onclick="verifyToken()">验证令牌</button>
+    <button type="button" id="tokenBtn" onclick="verifyToken()" data-i18n="token_verify_btn">验证令牌</button>
   </div>
 
   <!-- Step 2: Password -->
   <div class="step" id="step2">
-    <div class="step-label">STEP 2 · 访问密码</div>
-    <label for="pw">访问密码</label>
+    <div class="step-label" data-i18n="step2_label">STEP 2 · 访问密码</div>
+    <label for="pw" data-i18n="pw_label">访问密码</label>
     <input type="text" id="pw" class="masked-input" autocomplete="off" spellcheck="false">
-    <button type="button" id="pwBtn" onclick="goStep3()">下一步</button>
+    <button type="button" id="pwBtn" onclick="goStep3()" data-i18n="pw_next_btn">下一步</button>
   </div>
 
   <!-- Step 3: Verification Code + Submit -->
   <div class="step" id="step3">
-    <div class="step-label">STEP 3 · 安全验证</div>
+    <div class="step-label" data-i18n="step3_label">STEP 3 · 安全验证</div>
     <form method="POST" id="authForm" accept-charset="UTF-8">
       <input type="hidden" id="h_token" name="token">
       <input type="hidden" id="h_pw" name="password">
       <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-      <label for="code">安全验证码</label>
+      <label for="code" data-i18n="code_label">安全验证码</label>
       <input type="text" id="code" name="verify_code" class="masked-input" autocomplete="off" spellcheck="false">
-      <button type="submit">验证并登录</button>
+      <button type="submit" data-i18n="login_btn">验证并登录</button>
     </form>
   </div>
 
   {{error}}
 </div>
+<script src="/static/i18n.js"></script>
 <script>
+i18n.load();
 function setStep(n){
   for(var i=1;i<=3;i++){
     document.getElementById('step'+i).className = i===n ? 'step active' : 'step';
@@ -98,9 +106,9 @@ function setStep(n){
 function verifyToken(){
   var token = document.getElementById('token').value.trim();
   if(!token){document.getElementById('tokenError').style.display='block';
-    document.getElementById('tokenError').textContent='请输入 Token';return;}
+    document.getElementById('tokenError').textContent=t('token_empty');return;}
   var btn = document.getElementById('tokenBtn');
-  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>验证中…';
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>'+t('token_verifying');
   document.getElementById('tokenError').style.display='none';
   document.getElementById('tokenOk').style.display='none';
   var xhr=new XMLHttpRequest();
@@ -108,22 +116,22 @@ function verifyToken(){
   xhr.setRequestHeader('Content-Type','application/json');
   xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
   xhr.onload=function(){
-    btn.disabled=false; btn.textContent='验证令牌';
+    btn.disabled=false; btn.textContent=t('token_verify_btn');
     var r=JSON.parse(xhr.responseText);
     if(r.ok){
       document.getElementById('tokenOk').style.display='block';
-      document.getElementById('tokenOk').textContent='✓ 令牌有效，正在进入下一步…';
+      document.getElementById('tokenOk').textContent=t('token_valid');
       document.getElementById('h_token').value=token;
       setTimeout(function(){setStep(2);document.getElementById('pw').focus();},600);
     } else {
       document.getElementById('tokenError').style.display='block';
-      document.getElementById('tokenError').textContent=r.error||'令牌无效';
+      document.getElementById('tokenError').textContent=r.error||t('token_invalid');
     }
   };
   xhr.onerror=function(){
-    btn.disabled=false; btn.textContent='验证令牌';
+    btn.disabled=false; btn.textContent=t('token_verify_btn');
     document.getElementById('tokenError').style.display='block';
-    document.getElementById('tokenError').textContent='网络错误';
+    document.getElementById('tokenError').textContent=t('network_error');
   };
   xhr.send(JSON.stringify({token:token}));
 }
