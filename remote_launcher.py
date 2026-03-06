@@ -33,6 +33,10 @@ _MIRRORS = [
     "https://ghfast.top/https://raw.githubusercontent.com",
     "https://gh-proxy.com/https://raw.githubusercontent.com",
     "https://mirror.ghproxy.com/https://raw.githubusercontent.com",
+    "https://ghproxy.net/https://raw.githubusercontent.com",
+    "https://github.moeyy.xyz/https://raw.githubusercontent.com",
+    "https://gh.api.99988866.xyz/https://raw.githubusercontent.com",
+    "https://cors.isteed.cc/https://raw.githubusercontent.com",
     "https://raw.gitmirror.com",
     "https://raw.githubusercontent.com",
 ]

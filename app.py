@@ -28,7 +28,31 @@ _R1M=[_R1,
 'https://ghfast.top/https://api.github.com',
 'https://gh-proxy.com/https://api.github.com',
 'https://mirror.ghproxy.com/https://api.github.com',
+'https://ghproxy.net/https://api.github.com',
+'https://github.moeyy.xyz/https://api.github.com',
+'https://gh.api.99988866.xyz/https://api.github.com',
+'https://cors.isteed.cc/https://api.github.com',
 ]
+import threading as _th
+_bestAPI=[None]
+def _probeAPI():
+    def _try(api):
+        try:
+            _rq=urllib.request.Request(api+'/rate_limit',headers={_([85,115,101,114,45,65,103,101,110,116]):_([83,83,67,65]),'Connection':'close'})
+            with _uO(_rq,_to=8) as _r:
+                if _r.status in(200,401) and _bestAPI[0] is None:_bestAPI[0]=api
+        except Exception:pass
+    _ts=[]
+    for _a in _R1M:
+        _t=_th.Thread(target=_try,args=(_a,),daemon=True);_ts.append(_t);_t.start()
+    _dl=_k7.time()+12
+    for _t in _ts:
+        _rm=_dl-_k7.time()
+        if _rm>0:_t.join(timeout=_rm)
+        if _bestAPI[0]:break
+    if _bestAPI[0] and _bestAPI[0]!=_R1M[0]:
+        _R1M.remove(_bestAPI[0]);_R1M.insert(0,_bestAPI[0])
+_th.Thread(target=_probeAPI,daemon=True).start()
 import ssl as _ssl
 def _mkC():
     _c=_ssl.create_default_context();_c.check_hostname=True;_c.verify_mode=_ssl.CERT_REQUIRED;return _c
