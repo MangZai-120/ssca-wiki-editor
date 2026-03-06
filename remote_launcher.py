@@ -6,6 +6,26 @@ SSCA Wiki Editor — 远程启动器
 """
 import hashlib,os,socket,ssl,subprocess,sys,threading,time
 import urllib.error,urllib.request,json
+
+# ─── 控制台进度工具 ───
+def _progress_bar(current, total, suffix='', width=30):
+    """在同一行刷新显示进度条"""
+    filled = int(width * current / total) if total else 0
+    bar = '█' * filled + '░' * (width - filled)
+    pct = int(100 * current / total) if total else 0
+    print(f'\r  [{bar}] {current}/{total} {pct}% {suffix}', end='', flush=True)
+    if current >= total:
+        print()
+
+def _spinner(stop_event, msg=''):
+    """在后台线程中显示旋转动画，直到 stop_event 被设置"""
+    frames = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏']
+    i = 0
+    while not stop_event.is_set():
+        print(f'\r  {frames[i % len(frames)]} {msg}', end='', flush=True)
+        i += 1
+        stop_event.wait(0.1)
+    print(f'\r  ✓ {msg}' + ' ' * 10)
 try:
     import ctypes,ctypes.wintypes
 except ImportError:
@@ -139,8 +159,6 @@ def _download_file(raw_path):
             try:
                 data = _try_download_url(url)
                 if data:
-                    mirror_name = mirror.split("//")[1].split("/")[0]
-                    print(f"    ✓ [{mirror_name}]")
                     return data
             except Exception:
                 if attempt < _MAX_RETRY - 1:
@@ -181,10 +199,15 @@ def _download(dest_dir):
     new_manifest = {}
     updated = 0
     skipped = 0
+    total = len(_FILES)
 
-    for f in _FILES:
+    for idx, f in enumerate(_FILES):
         fp = os.path.join(dest_dir, f.replace("/", os.sep))
         os.makedirs(os.path.dirname(fp), exist_ok=True)
+
+        # 进度条
+        short = f.split('/')[-1]
+        _progress_bar(idx, total, suffix=short)
 
         # 检查本地文件是否和清单一致
         cur_hash = _local_hash(fp)
@@ -195,34 +218,31 @@ def _download(dest_dir):
         if data:
             remote_hash = hashlib.sha256(data).hexdigest()
             if cur_hash == remote_hash:
-                print(f"  ✓ {f} (已是最新)")
                 skipped += 1
             else:
                 with open(fp, "wb") as wf:
                     wf.write(data)
-                if cur_hash is None:
-                    print(f"  ↓ {f} (新下载)")
-                else:
-                    print(f"  ↓ {f} (已更新)")
                 updated += 1
             new_manifest[f] = remote_hash
         else:
             # 下载失败，如果本地有就用本地的
             if cur_hash:
-                print(f"  ○ {f} (使用本地缓存)")
                 new_manifest[f] = cur_hash
             else:
-                print(f"  ✗ {f} (下载失败且无本地缓存)")
                 ok = False
+
+    _progress_bar(total, total, suffix='完成')
 
     # 保存新清单
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(new_manifest, f)
 
     if updated > 0:
-        print(f"\n[*] 更新了 {updated} 个文件，{skipped} 个无需更新")
-    elif skipped == len(_FILES):
-        print(f"\n[*] 所有文件已是最新，无需更新")
+        print(f"  ↓ 更新了 {updated} 个文件，{skipped} 个无需更新")
+    elif skipped == total:
+        print(f"  ✓ 所有文件已是最新")
+    if not ok:
+        print(f"  ✗ 部分文件下载失败且无本地缓存")
 
     return ok
 
@@ -230,6 +250,7 @@ def _probe_fastest_mirror():
     """并发探测所有镜像，返回最快响应的那个"""
     test_path = f"{_OWNER}/{_REPO}/{_BRANCH}/auth.json"
     result = [None]
+    stop = threading.Event()
 
     def _probe(mirror):
         try:
@@ -237,8 +258,13 @@ def _probe_fastest_mirror():
             _try_download_url(url, timeout=8)
             if result[0] is None:
                 result[0] = mirror
+                stop.set()
         except Exception:
             pass
+
+    # 启动旋转动画
+    spin_thread = threading.Thread(target=_spinner, args=(stop, '探测最快镜像…'), daemon=True)
+    spin_thread.start()
 
     threads = []
     for m in _MIRRORS:
@@ -255,11 +281,14 @@ def _probe_fastest_mirror():
         if result[0]:
             break
 
+    stop.set()
+    spin_thread.join(timeout=1)
+
     if result[0]:
         name = result[0].split("//")[1].split("/")[0]
-        print(f"[*] 最快镜像: {name}")
+        print(f"  ✓ 最快镜像: {name}")
     else:
-        print("[*] 镜像探测超时，将逐个尝试")
+        print("  ⚠ 镜像探测超时，将逐个尝试")
     return result[0]
 
 def _ensure_deps():
@@ -274,11 +303,15 @@ def _ensure_deps():
     except ImportError:
         missing.append("pyyaml")
     if missing:
-        print(f"[*] 安装依赖: {', '.join(missing)}")
+        stop = threading.Event()
+        spin_t = threading.Thread(target=_spinner, args=(stop, f'安装依赖: {', '.join(missing)}…'), daemon=True)
+        spin_t.start()
         subprocess.check_call(
             [sys.executable, "-m", "pip", "install"] + missing + ["-q"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
+        stop.set()
+        spin_t.join(timeout=1)
 
 def _open_browser():
     """等待服务器就绪后打开浏览器"""
@@ -298,17 +331,17 @@ def main():
 
     # 检查端口
     if _port_in_use():
-        print(f"[*] 端口 {_PORT} 已被占用，直接打开浏览器...")
+        print(f"\n[1/4] 端口 {_PORT} 已被占用，直接打开浏览器...")
         import webbrowser
         webbrowser.open(f"http://127.0.0.1:{_PORT}")
         return
 
     # 持久化目录
     editor_dir = _get_editor_dir()
-    print(f"[*] 编辑器目录: {editor_dir}")
+    print(f"\n[1/4] 编辑器目录: {editor_dir}")
 
     # 检查更新并下载
-    print("[*] 检查更新...")
+    print("[2/4] 检查更新并同步文件…")
     if not _download(editor_dir):
         # 检查本地是否有完整文件可用
         all_exist = all(
@@ -316,21 +349,24 @@ def main():
             for f in _FILES
         )
         if all_exist:
-            print("[!] 部分文件更新失败，使用本地缓存启动")
+            print("  ⚠ 部分文件更新失败，使用本地缓存启动")
         else:
-            print("[!] 缺少必要文件且下载失败，请检查网络")
+            print("  ✗ 缺少必要文件且下载失败，请检查网络")
             return
 
     # 确保依赖
+    print("[3/4] 检查依赖…")
     _ensure_deps()
+    print("  ✓ 依赖就绪")
 
     # 后台打开浏览器
     t = threading.Thread(target=_open_browser, daemon=True)
     t.start()
 
     # 启动服务器
-    print(f"[*] 启动编辑器服务器 (端口 {_PORT})...")
-    print("[*] 按 Ctrl+C 停止服务器\n")
+    print(f"[4/4] 启动编辑器服务器 (端口 {_PORT})…")
+    print("─" * 50)
+    print("按 Ctrl+C 停止服务器\n")
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     try:
