@@ -43,33 +43,41 @@ def _t(_key,*_args):
     return _s
 _R1=_([104,116,116,112,115,58,47,47,97,112,105,46,103,105,116,104,117,98,46,99,111,109])
 _R1M=[_R1,
-'https://ghfast.top/https://api.github.com',
 'https://gh-proxy.com/https://api.github.com',
-'https://mirror.ghproxy.com/https://api.github.com',
 'https://ghproxy.net/https://api.github.com',
+'https://cors.isteed.cc/https://api.github.com',
+'https://ghfast.top/https://api.github.com',
+'https://mirror.ghproxy.com/https://api.github.com',
 'https://github.moeyy.xyz/https://api.github.com',
 'https://gh.api.99988866.xyz/https://api.github.com',
-'https://cors.isteed.cc/https://api.github.com',
 ]
 import threading as _th
 _bestAPI=[None]
+_aliveAPI=[]
+_aliveL=_th.Lock()
 def _probeAPI():
     def _try(api):
         try:
             _rq=urllib.request.Request(api+'/rate_limit',headers={_([85,115,101,114,45,65,103,101,110,116]):_([83,83,67,65]),'Connection':'close'})
             with _uO(_rq,_to=8) as _r:
-                if _r.status in(200,401) and _bestAPI[0] is None:_bestAPI[0]=api
+                if _r.status in(200,401):
+                    with _aliveL:_aliveAPI.append(api)
+                    if _bestAPI[0] is None:_bestAPI[0]=api
         except Exception:pass
     _ts=[]
     for _a in _R1M:
-        _t=_th.Thread(target=_try,args=(_a,),daemon=True);_ts.append(_t);_t.start()
+        _t2=_th.Thread(target=_try,args=(_a,),daemon=True);_ts.append(_t2);_t2.start()
     _dl=_k7.time()+12
-    for _t in _ts:
+    for _t2 in _ts:
         _rm=_dl-_k7.time()
-        if _rm>0:_t.join(timeout=_rm)
+        if _rm>0:_t2.join(timeout=_rm)
         if _bestAPI[0]:break
-    if _bestAPI[0] and _bestAPI[0]!=_R1M[0]:
-        _R1M.remove(_bestAPI[0]);_R1M.insert(0,_bestAPI[0])
+    _k7.sleep(1)
+    if _aliveAPI:
+        _R1M.clear()
+        if _bestAPI[0]:_R1M.append(_bestAPI[0])
+        for _a in _aliveAPI:
+            if _a not in _R1M:_R1M.append(_a)
 _th.Thread(target=_probeAPI,daemon=True).start()
 import ssl as _ssl
 def _mkC():
@@ -96,7 +104,7 @@ def _mkO():
     _hs.append(urllib.request.HTTPSHandler(context=_mkC()))
     return urllib.request.build_opener(*_hs)
 _opn=_mkO()
-def _uO(_rq,_to=30):
+def _uO(_rq,_to=12):
     return _opn.open(_rq,timeout=_to)
 _R2=_([77,97,110,103,90,97,105,45,49,50,48])
 _R3=_([115,104,97,112,101,45,115,104,105,102,116,101,114,45,99,117,114,115,101,45,97,100,100,111,110])
