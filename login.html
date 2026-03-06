@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SSCA Wiki Editor (GitHub) - 登录</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9;
+       display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+        padding: 40px 36px; width: 520px; max-width: 90vw; }
+.card h1 { font-size: 22px; margin-bottom: 6px; color: #58a6ff; }
+.card .badge { font-size: 11px; background: #238636; color: #fff; padding: 2px 6px;
+               border-radius: 4px; vertical-align: middle; }
+.card p.sub { font-size: 13px; color: #8b949e; margin-bottom: 24px; }
+label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+input[type=text], input[type=password] {
+  width: 100%; padding: 10px 12px; border: 1px solid #30363d;
+  border-radius: 6px; background: #0d1117; color: #c9d1d9; font-size: 15px;
+  margin-bottom: 18px; }
+input:focus { outline: none; border-color: #58a6ff; }
+button { width: 100%; padding: 10px; background: #238636; color: #fff; border: none;
+         border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; }
+button:hover { background: #2ea043; }
+button:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
+.error { color: #f85149; font-size: 13px; margin-bottom: 12px; }
+.step { display: none; }
+.step.active { display: block; }
+.step-label { font-size: 11px; color: #484f58; margin-bottom: 8px; text-transform: uppercase;
+              letter-spacing: 1px; }
+.progress-bar { display: flex; gap: 6px; margin-bottom: 24px; }
+.progress-dot { flex: 1; height: 4px; border-radius: 2px; background: #21262d; }
+.progress-dot.done { background: #238636; }
+.progress-dot.current { background: #58a6ff; }
+#tokenError { color: #f85149; font-size: 13px; margin-bottom: 12px; display: none; }
+#tokenOk { color: #3fb950; font-size: 13px; margin-bottom: 12px; display: none; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #30363d;
+           border-top-color: #58a6ff; border-radius: 50%; animation: spin .6s linear infinite;
+           vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>SSCA Wiki Editor <span class="badge">GitHub</span></h1>
+  <p class="sub">请完成以下步骤以进入编辑器</p>
+  <div class="progress-bar">
+    <div class="progress-dot current" id="dot1"></div>
+    <div class="progress-dot" id="dot2"></div>
+    <div class="progress-dot" id="dot3"></div>
+  </div>
+
+  <!-- Step 1: GitHub Token -->
+  <div class="step active" id="step1">
+    <div class="step-label">STEP 1</div>
+    <label for="token">请输入令牌</label>
+    <input type="password" id="token" placeholder="github_pat_..." autofocus>
+    <div id="tokenError"></div>
+    <div id="tokenOk"></div>
+    <button type="button" id="tokenBtn" onclick="verifyToken()">验证令牌</button>
+  </div>
+
+  <!-- Step 2: Password -->
+  <div class="step" id="step2">
+    <div class="step-label">STEP 2 · 访问密码</div>
+    <label for="pw">访问密码</label>
+    <input type="password" id="pw" autocomplete="off">
+    <button type="button" id="pwBtn" onclick="goStep3()">下一步</button>
+  </div>
+
+  <!-- Step 3: Verification Code + Submit -->
+  <div class="step" id="step3">
+    <div class="step-label">STEP 3 · 安全验证</div>
+    <form method="POST" id="authForm" accept-charset="UTF-8">
+      <input type="hidden" id="h_token" name="token">
+      <input type="hidden" id="h_pw" name="password">
+      <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+      <label for="code">安全验证码</label>
+      <input type="password" id="code" name="verify_code" autocomplete="off">
+      <button type="submit">验证并登录</button>
+    </form>
+  </div>
+
+  {{error}}
+</div>
+<script>
+function setStep(n){
+  for(var i=1;i<=3;i++){
+    document.getElementById('step'+i).className = i===n ? 'step active' : 'step';
+    var dot = document.getElementById('dot'+i);
+    dot.className = i<n ? 'progress-dot done' : i===n ? 'progress-dot current' : 'progress-dot';
+  }
+}
+function verifyToken(){
+  var token = document.getElementById('token').value.trim();
+  if(!token){document.getElementById('tokenError').style.display='block';
+    document.getElementById('tokenError').textContent='请输入 Token';return;}
+  var btn = document.getElementById('tokenBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>验证中…';
+  document.getElementById('tokenError').style.display='none';
+  document.getElementById('tokenOk').style.display='none';
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST','/api/verify_token');
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
+  xhr.onload=function(){
+    btn.disabled=false; btn.textContent='验证令牌';
+    var r=JSON.parse(xhr.responseText);
+    if(r.ok){
+      document.getElementById('tokenOk').style.display='block';
+      document.getElementById('tokenOk').textContent='✓ 令牌有效，正在进入下一步…';
+      document.getElementById('h_token').value=token;
+      setTimeout(function(){setStep(2);document.getElementById('pw').focus();},600);
+    } else {
+      document.getElementById('tokenError').style.display='block';
+      document.getElementById('tokenError').textContent=r.error||'令牌无效';
+    }
+  };
+  xhr.onerror=function(){
+    btn.disabled=false; btn.textContent='验证令牌';
+    document.getElementById('tokenError').style.display='block';
+    document.getElementById('tokenError').textContent='网络错误';
+  };
+  xhr.send(JSON.stringify({token:token}));
+}
+function goStep3(){
+  var pw=document.getElementById('pw').value;
+  if(!pw){return;}
+  document.getElementById('h_pw').value=pw;
+  setStep(3);
+  document.getElementById('code').focus();
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'){
+    var s1=document.getElementById('step1');
+    if(s1.classList.contains('active')){e.preventDefault();verifyToken();}
+    var s2=document.getElementById('step2');
+    if(s2.classList.contains('active')){e.preventDefault();goStep3();}
+  }
+});
+</script>
+</body>
+</html>

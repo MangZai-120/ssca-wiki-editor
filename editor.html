@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SSCA Wiki Editor (GitHub)</title>
+<link rel="stylesheet" href="/static/editor.css">
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+</head>
+<body>
+
+<!-- 顶部工具栏 -->
+<header id="toolbar">
+  <span class="brand">SSCA Wiki Editor <span class="badge">GitHub</span></span>
+  <span id="current-path">未选择文件</span>
+  <div class="spacer"></div>
+  <span id="status-dot" class="status-dot" title="检查连接中…"></span>
+  <button id="btn-save" disabled title="保存到 GitHub">&#128190; 保存</button>
+  <button id="btn-undo" class="btn-secondary" disabled title="撤回上一次编辑操作">&#8617; 撤回</button>
+  <button id="btn-new" class="btn-secondary" title="新建页面">&#128196; 新建</button>
+  <button id="btn-delete" class="btn-danger" disabled title="删除当前页面">&#128465; 删除</button>
+  <span id="session-timer" title="空闲超时倒计时，操作后自动刷新；关闭浏览器再回来需重新登录" style="font-size:12px;color:#8b949e;margin-right:8px;cursor:help;"></span>
+  <button id="btn-logout" class="btn-secondary" title="退出登录">退出</button>
+</header>
+
+<!-- 主体 -->
+<div id="main">
+  <!-- 侧栏 -->
+  <aside id="sidebar">
+    <div id="sidebar-header">
+      <h3>Wiki 导航</h3>
+      <button id="btn-refresh" title="刷新导航">&#128260;</button>
+    </div>
+    <div id="nav-tree">
+      <div class="loading">加载中…</div>
+    </div>
+  </aside>
+
+  <!-- 编辑区域 -->
+  <div id="editor-area">
+    <div id="editor-placeholder">
+      <div class="placeholder-content">
+        <div class="placeholder-icon">&#128221;</div>
+        <h2>SSCA Wiki 远程编辑器</h2>
+        <p>点击左侧导航选择要编辑的页面</p>
+        <p class="placeholder-sub">所有修改将直接提交到 GitHub 仓库</p>
+      </div>
+    </div>
+    <div id="editor-container"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- 新建页面弹窗 -->
+<div id="create-dialog" class="dialog-overlay">
+  <div class="dialog-box">
+    <h3>新建 Wiki 页面</h3>
+    <label for="create-title">页面标题</label>
+    <input id="create-title" placeholder="例如: 新物品介绍">
+    <label for="create-dir">文件目录</label>
+    <select id="create-dir"><option value="">docs/（根目录）</option></select>
+    <label for="create-filename">文件名</label>
+    <input id="create-filename" placeholder="例如: new_item.md">
+    <label for="create-section">归入导航分区（可选）</label>
+    <select id="create-section"><option value="">-- 不添加到导航 --</option></select>
+    <div class="dialog-actions">
+      <button class="btn-cancel" id="create-cancel">取消</button>
+      <button class="btn-primary" id="create-confirm">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认弹窗 -->
+<div id="delete-dialog" class="dialog-overlay">
+  <div class="dialog-box">
+    <h3 style="color:#f85149">确认删除</h3>
+    <p>确定要删除页面 <strong id="del-path"></strong> 吗？</p>
+    <p style="color:#f85149;font-size:13px;margin-top:8px">此操作将直接删除 GitHub 上的文件，不可撤销。</p>
+    <div class="dialog-actions">
+      <button class="btn-cancel" id="del-cancel">取消</button>
+      <button class="btn-danger" id="del-confirm">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+<script src="/static/editor.js"></script>
+</body>
+</html>

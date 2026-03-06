@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.history/
+.vscode/
+remote_launcher.py
+远程启动器.bat
+启动编辑器.bat
