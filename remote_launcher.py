@@ -66,6 +66,7 @@ _FILES = [
     "auth.json",
     "login.html",
     "editor.html",
+    "preview.html",
     "static/editor.css",
     "static/editor.js",
     "static/i18n.js",
