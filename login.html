@@ -19,8 +19,10 @@ input[type=text], input[type=password] {
   width: 100%; padding: 10px 12px; border: 1px solid #30363d;
   border-radius: 6px; background: #0d1117; color: #c9d1d9; font-size: 15px;
   margin-bottom: 18px; }
+.masked-input {
+  -webkit-text-security: disc; -moz-text-security: disc;
+  text-security: disc; ime-mode: active; }
 input:focus { outline: none; border-color: #58a6ff; }
-.masked { -webkit-text-security: disc; text-security: disc; }
 button { width: 100%; padding: 10px; background: #238636; color: #fff; border: none;
          border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; }
 button:hover { background: #2ea043; }
@@ -66,7 +68,7 @@ button:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
   <div class="step" id="step2">
     <div class="step-label">STEP 2 · 访问密码</div>
     <label for="pw">访问密码</label>
-    <input type="text" id="pw" class="masked" autocomplete="off">
+    <input type="text" id="pw" class="masked-input" autocomplete="off" spellcheck="false">
     <button type="button" id="pwBtn" onclick="goStep3()">下一步</button>
   </div>
 
@@ -78,7 +80,7 @@ button:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
       <input type="hidden" id="h_pw" name="password">
       <input type="hidden" name="csrf_token" value="{{csrf_token}}">
       <label for="code">安全验证码</label>
-      <input type="text" id="code" name="verify_code" class="masked" autocomplete="off">
+      <input type="text" id="code" name="verify_code" class="masked-input" autocomplete="off" spellcheck="false">
       <button type="submit">验证并登录</button>
     </form>
   </div>
